@@ -2,9 +2,10 @@
 
 #-------------------------
 #import dependencies
-import datetime as dt
 import numpy as np
+import datetime as dt
 import pandas as pd
+
 
 import sqlalchemy
 from sqlalchemy.ext.automap import automap_base
@@ -12,6 +13,7 @@ from sqlalchemy.orm import Session
 from sqlalchemy import create_engine, func
 
 from flask import Flask, jsonify
+
 
 #----------------------------------------------------------
 #conection to database - first steps in ipynb file
@@ -21,8 +23,8 @@ Base = automap_base()
 
 Base.prepare(engine, reflect=True)
 
-measurement = Base.classes.measurement
-station = Base.classes.station
+Measurement = Base.classes.measurement
+Station = Base.classes.station
 
 #-----------------------------------------------------
 #FLASK
@@ -44,12 +46,14 @@ def welcome():
 def precipitation():
     """This is the precipitation for the last year"""
     
+    session = Session(engine)
     #last year precipitation as in last file
     last_year = dt.date(2017, 8, 23) - dt.timedelta(days=365)
 
     precipitation = session.query(measurement.date, measurement.prcp).\
         filter(measurement.date >= last_year).all()
-
+    
+    session.close()
     # save in dictionary
     precipitation_results = {date: prcp for date, prcp in precipitation}
     return jsonify(precipitation_results)
@@ -58,7 +62,9 @@ def precipitation():
 @app.route("/api/v1.0/stations")
 def stations():
     """Here our stations"""
+    session = Session(engine)
     list_stations = session.query(station.station).all()
+    session.close()
 
     # Unravel results into a 1D array and convert to a list
     stations_results = list(np.ravel(list_stations))
