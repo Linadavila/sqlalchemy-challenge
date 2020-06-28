@@ -88,51 +88,57 @@ def stations():
 
 @app.route("/api/v1.0/tobs")
 def temp_obs():
-    """Return the temperature observations (tobs) for previous year."""
+    """Last year temperature observations (tobs)"""
+    #start conection to session
     session = Session(engine)
+
+    #calculate the data that applies to this section
     last_year = dt.date(2017, 8, 23) - dt.timedelta(days=365)
 
     tobs_results = session.query(Measurement.tobs).\
         filter(Measurement.station == 'USC00519281').\
         filter(Measurement.date >= last_year).all()
     
+    #close the connection to the session
     session.close()
 
-    # Unravel results into a 1D array and convert to a list
+    # list the results
     tobs_list = list(np.ravel(tobs_results))
 
-    # Return the results
+
     return jsonify(tobs_list)
 
-
+#define 2 routes as per posibilities
 @app.route("/api/v1.0/temp/<start>")
 @app.route("/api/v1.0/temp/<start>/<end>")
 def stats(start=None, end=None):
     """Return TMIN, TAVG, TMAX."""
     
+    #Start the connection to session
     session = Session(engine)
+    
+    #calculate data that belongs to this section
     sel = [func.min(Measurement.tobs), func.avg(Measurement.tobs), func.max(Measurement.tobs)]
 
     if not end:
-        # calculate TMIN, TAVG, TMAX for dates greater than start
         results = session.query(*sel).\
             filter(Measurement.date >= start).all()
-        # Unravel results into a 1D array and convert to a list
+        #add the resuts to a list, for results if only getting end point
         temps = list(np.ravel(results))
         return jsonify(temps)
 
-    # calculate TMIN, TAVG, TMAX with start and stop
+    # calculate results if we are given start date and end date
     results = session.query(*sel).\
         filter(Measurement.date >= start).\
         filter(Measurement.date <= end).all()
     
     session.close()
-    # Unravel results into a 1D array and convert to a list
+    #add the results to a list
     temps_list = list(np.ravel(results))
     return jsonify(temps_list)
 
 
-
+#run the app
 if __name__ == '__main__':
     app.run()
 
